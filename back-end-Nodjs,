@@ -1,0 +1,46 @@
+
+// Basic Node.js server with OpenAI integration
+const express = require('express');
+const { OpenAI } = require('openai');
+const app = express();
+
+// Initialize OpenAI
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+app.use(express.json());
+
+// Basic chat endpoint
+app.post('/chat', async (req, res) => {
+  try {
+    const { message, location } = req.body;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
+          content: `You are a helpful travel assistant. User location: ${location || 'Unknown'}`
+        },
+        {
+          role: "user", 
+          content: message
+        }
+      ],
+      max_tokens: 500
+    });
+
+    res.json({
+      response: completion.choices[0].message.content
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
