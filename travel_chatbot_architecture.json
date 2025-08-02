@@ -1,0 +1,406 @@
+// Travel Chatbot Application JavaScript - Fixed Version
+
+class TravelChatbot {
+    constructor() {
+        this.currentLocation = '';
+        this.currentLanguage = 'en';
+        this.isTyping = false;
+        
+        console.log('Initializing Travel Chatbot...');
+        
+        // Ensure DOM is fully loaded before initialization
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.init());
+        } else {
+            this.init();
+        }
+    }
+
+    init() {
+        try {
+            this.initializeElements();
+            this.bindEvents();
+            console.log('Travel Chatbot initialized successfully');
+        } catch (error) {
+            console.error('Error initializing Travel Chatbot:', error);
+        }
+    }
+
+    initializeElements() {
+        // Chat elements
+        this.chatMessages = document.getElementById('chatMessages');
+        this.chatInput = document.getElementById('chatInput');
+        this.sendBtn = document.getElementById('sendBtn');
+        this.typingIndicator = document.getElementById('typingIndicator');
+        
+        // Location elements
+        this.locationInput = document.getElementById('locationInput');
+        this.locationBtn = document.getElementById('locationBtn');
+        
+        // Emergency modal elements
+        this.emergencyBtn = document.getElementById('emergencyBtn');
+        this.emergencyModal = document.getElementById('emergencyModal');
+        this.modalOverlay = document.getElementById('modalOverlay');
+        this.modalClose = document.getElementById('modalClose');
+        
+        // Language selector
+        this.languageSelector = document.getElementById('languageSelector');
+        
+        // Quick action buttons
+        this.quickActionBtns = document.querySelectorAll('.quick-action-btn');
+
+        // Log which elements were found
+        console.log('Elements found:', {
+            chatMessages: !!this.chatMessages,
+            chatInput: !!this.chatInput,
+            sendBtn: !!this.sendBtn,
+            locationInput: !!this.locationInput,
+            emergencyBtn: !!this.emergencyBtn,
+            quickActionBtns: this.quickActionBtns.length
+        });
+    }
+
+    bindEvents() {
+        // Chat functionality
+        if (this.sendBtn) {
+            this.sendBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('Send button clicked');
+                this.sendMessage();
+            });
+        }
+
+        if (this.chatInput) {
+            this.chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    console.log('Enter key pressed in chat input');
+                    this.sendMessage();
+                }
+            });
+        }
+
+        // Location functionality
+        if (this.locationBtn) {
+            this.locationBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('Location button clicked');
+                this.setLocation();
+            });
+        }
+
+        if (this.locationInput) {
+            this.locationInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    console.log('Enter key pressed in location input');
+                    this.setLocation();
+                }
+            });
+        }
+
+        // Emergency modal
+        if (this.emergencyBtn) {
+            this.emergencyBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('Emergency button clicked');
+                this.showEmergencyModal();
+            });
+        }
+
+        if (this.modalOverlay) {
+            this.modalOverlay.addEventListener('click', (e) => {
+                console.log('Modal overlay clicked');
+                this.hideEmergencyModal();
+            });
+        }
+
+        if (this.modalClose) {
+            this.modalClose.addEventListener('click', (e) => {
+                console.log('Modal close button clicked');
+                this.hideEmergencyModal();
+            });
+        }
+
+        // Language selector
+        if (this.languageSelector) {
+            this.languageSelector.addEventListener('change', (e) => {
+                this.currentLanguage = e.target.value;
+                const selectedOption = e.target.selectedOptions[0];
+                this.addBotMessage(`Language changed to ${selectedOption.text}. How can I help you?`);
+            });
+        }
+
+        // Quick action buttons
+        if (this.quickActionBtns && this.quickActionBtns.length > 0) {
+            this.quickActionBtns.forEach((btn, index) => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const category = btn.getAttribute('data-category');
+                    console.log(`Quick action button clicked: ${category}`);
+                    this.handleQuickAction(category);
+                });
+            });
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.hideEmergencyModal();
+            }
+        });
+
+        console.log('All event listeners bound successfully');
+    }
+
+    sendMessage() {
+        console.log('sendMessage called');
+        
+        if (!this.chatInput) {
+            console.error('Chat input not found');
+            return;
+        }
+        
+        const message = this.chatInput.value.trim();
+        console.log('Message to send:', message);
+        
+        if (!message) {
+            console.log('Empty message, not sending');
+            return;
+        }
+
+        this.addUserMessage(message);
+        this.chatInput.value = '';
+        
+        // Process the message and generate a response
+        setTimeout(() => {
+            this.processMessage(message);
+        }, 500);
+    }
+
+    addUserMessage(message) {
+        console.log('Adding user message:', message);
+        const messageElement = this.createMessageElement(message, 'user');
+        if (this.chatMessages) {
+            this.chatMessages.appendChild(messageElement);
+            this.scrollToBottom();
+        }
+    }
+
+    addBotMessage(message) {
+        console.log('Adding bot message:', message);
+        this.showTyping();
+        
+        setTimeout(() => {
+            this.hideTyping();
+            const messageElement = this.createMessageElement(message, 'bot');
+            if (this.chatMessages) {
+                this.chatMessages.appendChild(messageElement);
+                this.scrollToBottom();
+            }
+        }, 1000 + Math.random() * 1000);
+    }
+
+    createMessageElement(message, type) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}-message`;
+        
+        const avatar = document.createElement('div');
+        avatar.className = 'message-avatar';
+        avatar.textContent = type === 'user' ? '👤' : '🤖';
+        
+        const content = document.createElement('div');
+        content.className = 'message-content';
+        
+        const text = document.createElement('div');
+        text.className = 'message-text';
+        text.textContent = message;
+        
+        const time = document.createElement('div');
+        time.className = 'message-time';
+        time.textContent = this.getCurrentTime();
+        
+        content.appendChild(text);
+        content.appendChild(time);
+        messageDiv.appendChild(avatar);
+        messageDiv.appendChild(content);
+        
+        return messageDiv;
+    }
+
+    processMessage(message) {
+        const lowerMessage = message.toLowerCase();
+        let response = '';
+
+        if (lowerMessage.includes('hotel') || lowerMessage.includes('accommodation') || lowerMessage.includes('stay')) {
+            response = "I found several great accommodation options for you: luxury hotels in the city center, boutique hotels in the historic quarter, and budget-friendly options near public transport. What's your preference?";
+        } else if (lowerMessage.includes('transport') || lowerMessage.includes('flight') || lowerMessage.includes('train') || lowerMessage.includes('bus')) {
+            response = "For getting around, you have these options: airport shuttles every 30 minutes, metro system with day passes, rental cars, and ride-sharing services. Which would work best for your itinerary?";
+        } else if (lowerMessage.includes('attraction') || lowerMessage.includes('museum') || lowerMessage.includes('sightseeing') || lowerMessage.includes('visit')) {
+            response = "Based on your location, I recommend visiting the local historical museum, the central cathedral, and the nearby cultural district. Would you like specific details about any of these?";
+        } else if (lowerMessage.includes('food') || lowerMessage.includes('restaurant') || lowerMessage.includes('eat')) {
+            response = "Local cuisine highlights: try the regional specialty dish, visit the famous food market, and don't miss the rooftop restaurant with city views. Would you like restaurant recommendations?";
+        } else if (lowerMessage.includes('weather') || lowerMessage.includes('climate') || lowerMessage.includes('temperature')) {
+            response = "Current weather: 22°C, partly cloudy. Tomorrow: 25°C, sunny. Perfect weather for sightseeing! Don't forget sunscreen.";
+        } else if (lowerMessage.includes('emergency') || lowerMessage.includes('help') || lowerMessage.includes('police') || lowerMessage.includes('hospital')) {
+            response = "I've located the nearest emergency services: Police station 0.5km away, Hospital 1.2km away, Embassy 2.1km away. Do you need immediate assistance? For emergencies, call 112 (universal number).";
+        } else if (lowerMessage.includes('location') || lowerMessage.includes('where')) {
+            response = this.generateLocationResponse();
+        } else if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
+            response = "Hello! I'm here to help with all your travel needs. You can ask me about hotels, attractions, transportation, weather, or anything else related to your trip.";
+        } else if (lowerMessage.includes('thank')) {
+            response = "You're welcome! Is there anything else I can help you with for your trip?";
+        } else {
+            response = "I'm here to help with all your travel needs! Whether you need information about attractions, hotels, transportation, or local services, just let me know. What would you like to explore?";
+        }
+
+        this.addBotMessage(response);
+    }
+
+    generateLocationResponse() {
+        if (this.currentLocation) {
+            return `You're currently set to ${this.currentLocation}. I can provide local recommendations for attractions, restaurants, hotels, and transportation. What would you like to explore?`;
+        } else {
+            return "Please set your location using the location input above so I can provide personalized recommendations for your area!";
+        }
+    }
+
+    setLocation() {
+        console.log('setLocation called');
+        
+        if (!this.locationInput) {
+            console.error('Location input not found');
+            return;
+        }
+        
+        const location = this.locationInput.value.trim();
+        console.log('Location to set:', location);
+        
+        if (!location) {
+            console.log('Empty location, not setting');
+            return;
+        }
+
+        this.currentLocation = location;
+        this.addUserMessage(`Set location to: ${location}`);
+        
+        const response = `Great! I've set your location to ${location}. I can now provide personalized recommendations for attractions, hotels, restaurants, and local services in this area. What would you like to explore first?`;
+        this.addBotMessage(response);
+        
+        this.locationInput.value = '';
+    }
+
+    handleQuickAction(category) {
+        console.log('handleQuickAction called with category:', category);
+        
+        let message = '';
+        
+        switch(category) {
+            case 'attractions':
+                message = 'Show me popular attractions and sightseeing spots';
+                break;
+            case 'hotels':
+                message = 'Help me find accommodation options';
+                break;
+            case 'transport':
+                message = 'I need transportation information';
+                break;
+            case 'food':
+                message = 'Recommend restaurants and local food';
+                break;
+            case 'weather':
+                message = 'What\'s the weather forecast?';
+                break;
+            case 'emergency':
+                this.showEmergencyModal();
+                return;
+            default:
+                message = `Tell me about ${category}`;
+        }
+        
+        this.addUserMessage(message);
+        setTimeout(() => {
+            this.processMessage(message);
+        }, 500);
+    }
+
+    showEmergencyModal() {
+        console.log('showEmergencyModal called');
+        if (this.emergencyModal) {
+            this.emergencyModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            console.log('Emergency modal shown');
+        } else {
+            console.error('Emergency modal not found');
+        }
+    }
+
+    hideEmergencyModal() {
+        console.log('hideEmergencyModal called');
+        if (this.emergencyModal) {
+            this.emergencyModal.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+            console.log('Emergency modal hidden');
+        }
+    }
+
+    showTyping() {
+        if (this.isTyping || !this.typingIndicator) return;
+        this.isTyping = true;
+        this.typingIndicator.classList.remove('hidden');
+        this.scrollToBottom();
+    }
+
+    hideTyping() {
+        if (!this.typingIndicator) return;
+        this.isTyping = false;
+        this.typingIndicator.classList.add('hidden');
+    }
+
+    scrollToBottom() {
+        if (this.chatMessages) {
+            setTimeout(() => {
+                this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+            }, 100);
+        }
+    }
+
+    getCurrentTime() {
+        const now = new Date();
+        return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+}
+
+// Initialize the chatbot
+let chatbotInstance = null;
+
+function initializeChatbot() {
+    try {
+        chatbotInstance = new TravelChatbot();
+        console.log('Chatbot instance created');
+    } catch (error) {
+        console.error('Failed to create chatbot instance:', error);
+    }
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeChatbot);
+} else {
+    initializeChatbot();
+}
+
+// Prevent any global text selection issues
+document.addEventListener('selectstart', function(e) {
+    // Allow text selection only in input fields and textareas
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        return true;
+    }
+    // For other elements, only allow if explicitly set to be selectable
+    if (e.target.classList.contains('selectable')) {
+        return true;
+    }
+    return true; // Allow normal text selection
+});
+
+console.log('Travel Chatbot script loaded');
