@@ -1,0 +1,130 @@
+import plotly.graph_objects as go
+import pandas as pd
+
+# Load the data
+data = [
+    {"Component": "Frontend", "Type": "Mobile App", "Technology": "React Native/Flutter", "Connections": ["API Server"], "Layer": "Presentation"},
+    {"Component": "API Server", "Type": "Backend", "Technology": "Node.js/Express", "Connections": ["OpenAI API", "Database", "Google Maps API", "Translation API", "Weather API", "Emergency Services"], "Layer": "Application"},
+    {"Component": "OpenAI API", "Type": "AI Service", "Technology": "GPT-3.5/GPT-4", "Connections": [], "Layer": "AI"},
+    {"Component": "Database", "Type": "Storage", "Technology": "Firebase/MongoDB", "Connections": [], "Layer": "Data"},
+    {"Component": "Google Maps API", "Type": "External API", "Technology": "Location Services", "Connections": [], "Layer": "External"},
+    {"Component": "Translation API", "Type": "External API", "Technology": "Google Translate", "Connections": [], "Layer": "External"},
+    {"Component": "Weather API", "Type": "External API", "Technology": "Weather Service", "Connections": [], "Layer": "External"},
+    {"Component": "Emergency Services", "Type": "External API", "Technology": "Local Services", "Connections": [], "Layer": "External"}
+]
+
+df = pd.DataFrame(data)
+
+# Define positions for components in each layer
+positions = {
+    "Frontend": (0, 4),
+    "API Server": (0, 3),
+    "OpenAI API": (-1, 2),
+    "Database": (1, 2),
+    "Google Maps API": (-1.5, 1),
+    "Translation API": (-0.5, 1),
+    "Weather API": (0.5, 1),
+    "Emergency Services": (1.5, 1)
+}
+
+# Color mapping for layers
+color_map = {
+    "Presentation": "#1FB8CD",
+    "Application": "#DB4545", 
+    "AI": "#2E8B57",
+    "Data": "#5D878F",
+    "External": "#D2BA4C"
+}
+
+# Create the figure
+fig = go.Figure()
+
+# Add rectangles for each component
+for _, row in df.iterrows():
+    component = row['Component']
+    x, y = positions[component]
+    color = color_map[row['Layer']]
+    
+    # Add rectangle shape
+    fig.add_shape(
+        type="rect",
+        x0=x-0.4, y0=y-0.15, x1=x+0.4, y1=y+0.15,
+        line=dict(color="white", width=2),
+        fillcolor=color
+    )
+    
+    # Add component name
+    fig.add_annotation(
+        x=x, y=y+0.05,
+        text=f"<b>{component}</b>",
+        showarrow=False,
+        font=dict(size=11, color="white"),
+        xanchor="center"
+    )
+    
+    # Add technology info
+    fig.add_annotation(
+        x=x, y=y-0.05,
+        text=row['Technology'][:15],
+        showarrow=False,
+        font=dict(size=9, color="white"),
+        xanchor="center"
+    )
+
+# Add connecting arrows
+connections = [
+    ("Frontend", "API Server"),
+    ("API Server", "OpenAI API"),
+    ("API Server", "Database"),
+    ("API Server", "Google Maps API"),
+    ("API Server", "Translation API"),
+    ("API Server", "Weather API"),
+    ("API Server", "Emergency Services")
+]
+
+for source, target in connections:
+    x0, y0 = positions[source]
+    x1, y1 = positions[target]
+    
+    # Add arrow line
+    fig.add_annotation(
+        x=x1, y=y1+0.15,
+        ax=x0, ay=y0-0.15,
+        xref="x", yref="y",
+        axref="x", ayref="y",
+        arrowhead=2,
+        arrowsize=1,
+        arrowwidth=2,
+        arrowcolor="#666666"
+    )
+
+# Add layer labels on the left
+fig.add_annotation(x=-2.2, y=4, text="<b>Frontend Layer</b>", showarrow=False, 
+                  font=dict(size=12, color='#333'), textangle=90)
+fig.add_annotation(x=-2.2, y=3, text="<b>Backend Layer</b>", showarrow=False, 
+                  font=dict(size=12, color='#333'), textangle=90)
+fig.add_annotation(x=-2.2, y=2, text="<b>Services Layer</b>", showarrow=False, 
+                  font=dict(size=12, color='#333'), textangle=90)
+fig.add_annotation(x=-2.2, y=1, text="<b>External APIs</b>", showarrow=False, 
+                  font=dict(size=12, color='#333'), textangle=90)
+
+# Update layout
+fig.update_layout(
+    title="Travel Chatbot System Architecture",
+    xaxis=dict(
+        range=[-2.5, 2.5],
+        showgrid=False, 
+        zeroline=False, 
+        showticklabels=False
+    ),
+    yaxis=dict(
+        range=[0.5, 4.5],
+        showgrid=False, 
+        zeroline=False, 
+        showticklabels=False
+    ),
+    plot_bgcolor='white',
+    showlegend=False
+)
+
+fig.write_image("travel_chatbot_architecture.png", width=1000, height=700)
