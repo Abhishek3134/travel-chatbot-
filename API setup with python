@@ -1,0 +1,77 @@
+import plotly.express as px
+import plotly.graph_objects as go
+import pandas as pd
+
+# Data for the development timeline
+data = [
+    {"Phase": "Week 1: Setup & Backend", "Task": "OpenAI API Setup", "Start": 1, "Duration": 2, "Category": "Backend"},
+    {"Phase": "Week 1: Setup & Backend", "Task": "Node.js Server", "Start": 1, "Duration": 3, "Category": "Backend"},
+    {"Phase": "Week 1: Setup & Backend", "Task": "Database Setup", "Start": 2, "Duration": 2, "Category": "Backend"},
+    {"Phase": "Week 1: Setup & Backend", "Task": "Firebase Integration", "Start": 3, "Duration": 2, "Category": "Backend"},
+    {"Phase": "Week 2: Frontend Development", "Task": "React Native Setup", "Start": 8, "Duration": 2, "Category": "Frontend"},
+    {"Phase": "Week 2: Frontend Development", "Task": "Chat UI Components", "Start": 8, "Duration": 4, "Category": "Frontend"},
+    {"Phase": "Week 2: Frontend Development", "Task": "Navigation & Screens", "Start": 10, "Duration": 3, "Category": "Frontend"},
+    {"Phase": "Week 3: Core Features", "Task": "Location Services", "Start": 15, "Duration": 3, "Category": "Features"},
+    {"Phase": "Week 3: Core Features", "Task": "Emergency Locator", "Start": 16, "Duration": 2, "Category": "Features"},
+    {"Phase": "Week 3: Core Features", "Task": "Translation API", "Start": 17, "Duration": 3, "Category": "Features"},
+    {"Phase": "Week 3: Core Features", "Task": "Accommodation API", "Start": 18, "Duration": 2, "Category": "Features"},
+    {"Phase": "Week 4: Testing & Deployment", "Task": "Integration Testing", "Start": 22, "Duration": 3, "Category": "Testing"},
+    {"Phase": "Week 4: Testing & Deployment", "Task": "Bug Fixes", "Start": 24, "Duration": 2, "Category": "Testing"},
+    {"Phase": "Week 4: Testing & Deployment", "Task": "Deployment", "Start": 26, "Duration": 2, "Category": "Deployment"},
+    {"Phase": "Week 4: Testing & Deployment", "Task": "Optimization", "Start": 27, "Duration": 2, "Category": "Deployment"}
+]
+
+df = pd.DataFrame(data)
+
+# Truncate task names to 15 characters
+df['Task_Short'] = df['Task'].apply(lambda x: x[:15] if len(x) > 15 else x)
+
+# Create color mapping for categories
+color_map = {
+    "Backend": "#1FB8CD",
+    "Frontend": "#DB4545", 
+    "Features": "#2E8B57",
+    "Testing": "#5D878F",
+    "Deployment": "#D2BA4C"
+}
+
+# Create the Gantt chart using horizontal bar chart
+fig = go.Figure()
+
+# Add bars for each task
+for i, row in df.iterrows():
+    fig.add_trace(go.Bar(
+        x=[row['Duration']],
+        y=[row['Task_Short']],
+        base=[row['Start']],
+        orientation='h',
+        name=row['Category'],
+        marker_color=color_map[row['Category']],
+        showlegend=row['Category'] not in [trace.name for trace in fig.data],
+        hovertemplate=f"<b>{row['Task_Short']}</b><br>Start: Day {row['Start']}<br>Duration: {row['Duration']} days<extra></extra>"
+    ))
+
+# Update layout
+fig.update_layout(
+    title="Travel Chatbot MVP Dev Timeline",
+    xaxis_title="Days",
+    yaxis_title="Tasks",
+    barmode='overlay',
+    legend=dict(orientation='h', yanchor='bottom', y=1.05, xanchor='center', x=0.5)
+)
+
+# Update x-axis to show weeks
+fig.update_xaxes(
+    tickmode='array',
+    tickvals=[1, 8, 15, 22, 29],
+    ticktext=['Week 1', 'Week 2', 'Week 3', 'Week 4', 'End'],
+    range=[0, 30]
+)
+
+# Update y-axis - reverse order to show tasks chronologically from top to bottom
+fig.update_yaxes(
+    autorange="reversed"
+)
+
+# Save the chart
+fig.write_image("chatbot_dev_timeline.png")
