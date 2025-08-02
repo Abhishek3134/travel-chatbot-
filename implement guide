@@ -1,0 +1,382 @@
+# Create a comprehensive implementation guide with code examples
+implementation_guide = """
+# Travel Chatbot MVP Implementation Guide
+
+## Phase 1: Environment Setup & API Keys (Days 1-2)
+
+### 1.1 OpenAI API Setup
+```bash
+# Sign up at https://platform.openai.com/
+# Create API key in dashboard
+# Store in environment variables
+export OPENAI_API_KEY="your-api-key-here"
+```
+
+### 1.2 Google Maps API Setup
+```bash
+# Enable Google Maps JavaScript API
+# Enable Places API
+# Enable Geocoding API
+export GOOGLE_MAPS_API_KEY="your-google-maps-key"
+```
+
+### 1.3 Firebase Setup
+```bash
+# Create Firebase project
+# Enable Authentication
+# Enable Firestore Database
+# Download service account key
+```
+
+## Phase 2: Backend Development (Days 3-7)
+
+### 2.1 Node.js Server Setup
+```javascript
+// package.json dependencies
+{
+  "dependencies": {
+    "express": "^4.18.2",
+    "openai": "^4.20.1",
+    "firebase-admin": "^11.11.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "axios": "^1.6.0"
+  }
+}
+```
+
+### 2.2 Basic Server Structure
+```javascript
+const express = require('express');
+const { OpenAI } = require('openai');
+const admin = require('firebase-admin');
+const cors = require('cors');
+require('dotenv').config();
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// Initialize OpenAI
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// Initialize Firebase
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: process.env.FIREBASE_DATABASE_URL
+});
+
+const db = admin.firestore();
+```
+
+### 2.3 Chat Endpoint Implementation
+```javascript
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { message, location, userId } = req.body;
+    
+    // Create context-aware prompt
+    const systemPrompt = `You are a helpful travel assistant. 
+    User's location: ${location || 'Unknown'}
+    Provide helpful travel advice, recommendations, and assistance.
+    If asked about emergencies, provide relevant emergency numbers.
+    Keep responses concise and helpful.`;
+    
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: message }
+      ],
+      max_tokens: 500,
+      temperature: 0.7
+    });
+    
+    const response = completion.choices[0].message.content;
+    
+    // Store conversation in database
+    await db.collection('conversations').add({
+      userId,
+      message,
+      response,
+      location,
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
+    });
+    
+    res.json({ response, success: true });
+    
+  } catch (error) {
+    console.error('Chat API Error:', error);
+    res.status(500).json({ 
+      error: 'Failed to process message',
+      success: false 
+    });
+  }
+});
+```
+
+## Phase 3: Frontend Development (Days 8-14)
+
+### 3.1 React Native Setup
+```bash
+# Install React Native CLI
+npm install -g react-native-cli
+
+# Create new project
+react-native init TravelChatbot
+cd TravelChatbot
+
+# Install dependencies
+npm install react-native-gifted-chat
+npm install @react-native-async-storage/async-storage
+npm install react-native-geolocation-service
+npm install react-native-maps
+```
+
+### 3.2 Main Chat Screen Component
+```javascript
+import React, { useState, useEffect, useCallback } from 'react';
+import { GiftedChat } from 'react-native-gifted-chat';
+import { View, Alert } from 'react-native';
+import Geolocation from 'react-native-geolocation-service';
+
+const ChatScreen = () => {
+  const [messages, setMessages] = useState([]);
+  const [location, setLocation] = useState(null);
+
+  useEffect(() => {
+    // Get user location
+    Geolocation.getCurrentPosition(
+      (position) => {
+        setLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        });
+      },
+      (error) => console.log(error.code, error.message),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+    );
+
+    // Initial welcome message
+    setMessages([
+      {
+        _id: 1,
+        text: "Hello! I'm your AI travel assistant. How can I help you today?",
+        createdAt: new Date(),
+        user: {
+          _id: 2,
+          name: 'Travel Assistant',
+          avatar: '🤖',
+        },
+      },
+    ]);
+  }, []);
+
+  const onSend = useCallback(async (messages = []) => {
+    const userMessage = messages[0];
+    setMessages(previousMessages => 
+      GiftedChat.append(previousMessages, messages)
+    );
+
+    try {
+      // Send to backend API
+      const response = await fetch('http://your-backend-url/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage.text,
+          location: location,
+          userId: 'user123' // Replace with actual user ID
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        const botMessage = {
+          _id: Math.round(Math.random() * 1000000),
+          text: data.response,
+          createdAt: new Date(),
+          user: {
+            _id: 2,
+            name: 'Travel Assistant',
+            avatar: '🤖',
+          },
+        };
+
+        setMessages(previousMessages => 
+          GiftedChat.append(previousMessages, [botMessage])
+        );
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to send message');
+    }
+  }, [location]);
+
+  return (
+    <View style={{ flex: 1 }}>
+      <GiftedChat
+        messages={messages}
+        onSend={messages => onSend(messages)}
+        user={{
+          _id: 1,
+        }}
+        placeholder="Type your travel question..."
+      />
+    </View>
+  );
+};
+
+export default ChatScreen;
+```
+
+## Phase 4: Core Features Implementation (Days 15-21)
+
+### 4.1 Emergency Services Feature
+```javascript
+// Emergency services API endpoint
+app.get('/api/emergency/:country', async (req, res) => {
+  const { country } = req.params;
+  
+  const emergencyNumbers = {
+    'us': { police: '911', medical: '911', fire: '911' },
+    'uk': { police: '999', medical: '999', fire: '999' },
+    'eu': { police: '112', medical: '112', fire: '112' },
+    'india': { police: '100', medical: '108', fire: '101' }
+  };
+  
+  res.json(emergencyNumbers[country] || emergencyNumbers['us']);
+});
+```
+
+### 4.2 Location-based Recommendations
+```javascript
+// Google Places API integration
+const axios = require('axios');
+
+app.post('/api/places', async (req, res) => {
+  const { latitude, longitude, type } = req.body;
+  
+  try {
+    const response = await axios.get(
+      `https://maps.googleapis.com/maps/api/place/nearbysearch/json`, {
+        params: {
+          location: `${latitude},${longitude}`,
+          radius: 5000,
+          type: type, // restaurant, tourist_attraction, lodging
+          key: process.env.GOOGLE_MAPS_API_KEY
+        }
+      }
+    );
+    
+    res.json(response.data.results);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch places' });
+  }
+});
+```
+
+### 4.3 Translation Feature
+```javascript
+// Google Translate API integration
+const { Translate } = require('@google-cloud/translate').v2;
+const translate = new Translate({
+  key: process.env.GOOGLE_TRANSLATE_API_KEY
+});
+
+app.post('/api/translate', async (req, res) => {
+  const { text, targetLanguage } = req.body;
+  
+  try {
+    const [translation] = await translate.translate(text, targetLanguage);
+    res.json({ translation });
+  } catch (error) {
+    res.status(500).json({ error: 'Translation failed' });
+  }
+});
+```
+
+## Phase 5: Testing & Deployment (Days 22-28)
+
+### 5.1 Testing Strategy
+```javascript
+// Basic test structure using Jest
+const request = require('supertest');
+const app = require('../server');
+
+describe('Chat API', () => {
+  test('should respond to chat messages', async () => {
+    const response = await request(app)
+      .post('/api/chat')
+      .send({
+        message: 'Hello',
+        location: 'New York',
+        userId: 'test123'
+      });
+    
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.response).toBeDefined();
+  });
+});
+```
+
+### 5.2 Deployment Configuration
+```yaml
+# docker-compose.yml for containerized deployment
+version: '3.8'
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+      - FIREBASE_SERVICE_ACCOUNT=${FIREBASE_SERVICE_ACCOUNT}
+    depends_on:
+      - mongo
+  
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
+```
+
+## Environment Variables Required
+```bash
+# API Keys
+OPENAI_API_KEY=your_openai_key
+GOOGLE_MAPS_API_KEY=your_google_maps_key
+GOOGLE_TRANSLATE_API_KEY=your_translate_key
+
+# Database
+FIREBASE_SERVICE_ACCOUNT=path_to_service_account.json
+MONGODB_URI=mongodb://localhost:27017/travelchatbot
+
+# Server Configuration
+PORT=3000
+NODE_ENV=production
+```
+"""
+
+# Save the implementation guide
+with open('travel_chatbot_implementation_guide.md', 'w') as f:
+    f.write(implementation_guide)
+
+print("Complete implementation guide created!")
+print("\nKey Implementation Phases:")
+print("1. Environment Setup & API Keys (Days 1-2)")
+print("2. Backend Development (Days 3-7)")
+print("3. Frontend Development (Days 8-14)")
+print("4. Core Features Implementation (Days 15-21)")
+print("5. Testing & Deployment (Days 22-28)")
